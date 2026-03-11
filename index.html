@@ -9,8 +9,9 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #1f1f1f; }
         .drive-card { 
-            transition: background-color 0.2s; 
+            transition: all 0.2s; 
             border: 1px solid #e0e0e0;
+            user-select: none;
         }
         .drive-card:hover { background-color: #f1f3f4; }
         .drive-card.selected { background-color: #e8f0fe; border-color: #1a73e8; }
@@ -21,12 +22,13 @@
             z-index: 1000;
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            border-radius: 4px;
+            border-radius: 8px;
             padding: 4px 0;
-            min-width: 160px;
+            min-width: 180px;
+            border: 1px solid #ddd;
         }
         .menu-item {
-            padding: 8px 16px;
+            padding: 10px 16px;
             cursor: pointer;
             font-size: 14px;
             display: flex;
@@ -49,16 +51,21 @@
             background: #f8f9fa;
             display: flex; items-center; justify-content: center;
         }
+        
+        .breadcrumb-item:hover { text-decoration: underline; cursor: pointer; color: #1a73e8; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden" oncontextmenu="return showGlobalContextMenu(event)">
 
     <!-- Màn hình khóa -->
     <div id="lock-screen">
-        <div class="text-center">
-            <h2 class="text-2xl font-bold mb-4">Mã PIN: thanhphong</h2>
-            <input type="password" id="pin-code" placeholder="PIN" class="border p-2 rounded">
-            <button onclick="checkPin()" class="bg-blue-600 text-white px-4 py-2 rounded ml-2">Vào hệ thống</button>
+        <div class="text-center p-8 bg-white shadow-2xl rounded-3xl border border-slate-100">
+            <div class="mb-6 text-4xl">🔐</div>
+            <h2 class="text-xl font-bold mb-4">Mã PIN: thanhphong</h2>
+            <div class="flex flex-col gap-3">
+                <input type="password" id="pin-code" placeholder="Nhập PIN" class="border p-3 rounded-xl text-center focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="checkPin()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">Vào hệ thống</button>
+            </div>
         </div>
     </div>
 
@@ -66,6 +73,9 @@
     <div id="context-menu">
         <div class="menu-item text-blue-600 font-medium" onclick="addFolder()">
             <span>📁</span> Thư mục mới
+        </div>
+        <div class="menu-item" onclick="renameItem()">
+            <span>✏️</span> Đổi tên
         </div>
         <div class="menu-item" onclick="generateAiIdeas()">
             <span>✨</span> Gợi ý bằng AI
@@ -79,10 +89,16 @@
     <!-- Ứng dụng chính -->
     <div id="main-app" class="hidden-app flex flex-col h-full">
         <!-- Header kiểu Drive -->
-        <header class="h-16 border-b border-slate-200 flex items-center justify-between px-4 bg-white">
-            <div class="flex items-center gap-3">
-                <div class="p-2 text-blue-600"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg></div>
-                <h1 class="text-xl text-slate-700">AI Game Drive</h1>
+        <header class="h-16 border-b border-slate-200 flex items-center justify-between px-4 bg-white shrink-0">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+                <div class="p-2 text-blue-600">
+                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 7V17L12 22L20 17V7L12 2Z" fill="#1A73E8"/>
+                        <path d="M12 22V12L20 7" stroke="white" stroke-width="2"/>
+                        <path d="M12 12L4 7" stroke="white" stroke-width="2"/>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-medium text-slate-700">Drive của tôi</h1>
             </div>
             
             <div class="flex-1 max-w-2xl px-8">
@@ -97,7 +113,7 @@
             <div class="flex items-center gap-4">
                 <div id="ai-status" class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-bold text-slate-500">
                     <div id="ai-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span id="ai-text">OFFLINE</span>
+                    <span id="ai-text">GEMINI OFFLINE</span>
                     <button onclick="connectGemini()" class="text-blue-600 hover:underline">KẾT NỐI</button>
                 </div>
                 <button onclick="exportProject()" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Xuất bản</button>
@@ -106,18 +122,21 @@
 
         <div class="flex-1 flex overflow-hidden">
             <!-- Sidebar -->
-            <aside class="w-64 p-3 flex flex-col gap-2 bg-white">
+            <aside class="w-64 p-3 flex flex-col gap-2 bg-white shrink-0 border-r border-slate-100">
                 <button onclick="addFolder()" class="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-2xl shadow hover:shadow-md transition-shadow mb-4">
                     <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"/></svg>
                     <span class="font-medium text-sm">Mới</span>
                 </button>
 
                 <div class="space-y-1">
-                    <div class="flex items-center gap-3 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium cursor-pointer">
+                    <div onclick="goHome()" class="flex items-center gap-3 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium cursor-pointer">
                         <span>🏠</span> Drive của tôi
                     </div>
                     <div class="flex items-center gap-3 px-4 py-2 hover:bg-slate-100 rounded-full text-sm cursor-pointer text-slate-600">
-                        <span>✨</span> Được gợi ý (AI)
+                        <span>👥</span> Được chia sẻ với tôi
+                    </div>
+                    <div class="flex items-center gap-3 px-4 py-2 hover:bg-slate-100 rounded-full text-sm cursor-pointer text-slate-600">
+                        <span>🕒</span> Gần đây
                     </div>
                     <div class="flex items-center gap-3 px-4 py-2 hover:bg-slate-100 rounded-full text-sm cursor-pointer text-slate-600">
                         <span>🗑️</span> Thùng rác
@@ -126,39 +145,52 @@
             </aside>
 
             <!-- Grid View -->
-            <main class="flex-1 bg-white border-l border-slate-200 p-6 overflow-y-auto" onclick="deselectAll()">
-                <div class="flex items-center gap-2 text-slate-500 text-sm mb-6 border-b pb-2">
-                    <span>Drive của tôi</span>
-                    <span>›</span>
-                    <input type="text" id="project-title" value="Dự án Học tập Mới" onchange="updateProjectTitle()" class="font-medium text-slate-900 border-none focus:ring-0 p-0">
+            <main class="flex-1 bg-white p-6 overflow-y-auto" onclick="deselectAll()">
+                <div id="breadcrumb" class="flex items-center gap-2 text-slate-500 text-sm mb-6 pb-2">
+                    <!-- Breadcrumbs render here -->
                 </div>
 
-                <div id="visual-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <div id="visual-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
                     <!-- Drive Items -->
+                </div>
+                
+                <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 text-slate-400">
+                    <div class="text-6xl mb-4">📂</div>
+                    <p>Thư mục này trống</p>
                 </div>
             </main>
 
             <!-- AI Chat & Info Panel -->
-            <aside class="w-80 border-l border-slate-200 flex flex-col bg-slate-50">
+            <aside class="w-80 border-l border-slate-200 flex flex-col bg-slate-50 shrink-0">
                 <!-- Properties -->
-                <div id="info-panel" class="p-6 border-b border-slate-200 h-1/2 overflow-y-auto hidden">
-                    <h3 class="text-sm font-bold mb-4">Chi tiết</h3>
+                <div id="info-panel" class="p-6 border-b border-slate-200 bg-white hidden">
+                    <h3 class="text-sm font-bold mb-4 flex justify-between items-center">
+                        <span>Chi tiết</span>
+                        <button onclick="deselectAll()" class="text-slate-400 hover:text-slate-600">✕</button>
+                    </h3>
                     <div id="property-editor" class="space-y-4 text-xs"></div>
                 </div>
 
                 <!-- AI Chat -->
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
-                        <span class="text-xs font-bold uppercase text-slate-400">Trợ lý Gemini</span>
+                        <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Trợ lý Gemini</span>
                         <div id="chat-status" class="w-2 h-2 rounded-full bg-slate-300"></div>
                     </div>
-                    <div id="chat-window" class="flex-1 p-4 overflow-y-auto text-xs space-y-3">
-                        <div class="text-slate-400 italic text-center py-10">Kết nối AI để bắt đầu trò chuyện.</div>
+                    <div id="chat-window" class="flex-1 p-4 overflow-y-auto text-xs space-y-4">
+                        <div class="text-slate-400 italic text-center py-10 px-4">
+                            Kết nối AI để bắt đầu xây dựng dự án của bạn nhanh hơn.
+                        </div>
                     </div>
                     <div class="p-4 bg-white border-t border-slate-200">
-                        <input type="text" id="chat-input" disabled placeholder="Nhấn Enter để gửi..." 
-                               class="w-full bg-slate-100 border-transparent rounded-lg p-3 text-xs focus:ring-1 focus:ring-blue-500"
-                               onkeydown="if(event.key==='Enter') sendAiMessage()">
+                        <div class="relative">
+                            <input type="text" id="chat-input" disabled placeholder="Nhấn Enter để trò chuyện..." 
+                                   class="w-full bg-slate-100 border-transparent rounded-xl p-3 text-xs focus:ring-2 focus:ring-blue-500 transition-all pr-10 outline-none"
+                                   onkeydown="if(event.key==='Enter') sendAiMessage()">
+                            <button onclick="sendAiMessage()" class="absolute right-2 top-1.5 p-1.5 text-blue-600">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -166,12 +198,14 @@
     </div>
 
     <script>
-        const apiKey = "";
+        const apiKey = ""; // API Key được cung cấp tự động bởi môi trường
+        
         let projectData = {
-            title: "Dự án Học tập Mới",
+            currentPath: [], // Mảng chứa ID các thư mục cha
             items: [
-                { id: 'f1', type: 'folder', name: 'Toán học 6', icon: '📐', color: '#1a73e8' },
-                { id: 'f2', type: 'folder', name: 'Ngoại ngữ', icon: '🌍', color: '#ea4335' }
+                { id: 'f1', parentId: null, type: 'folder', name: 'Tài liệu học tập', icon: '📐', color: '#1a73e8' },
+                { id: 'f2', parentId: null, type: 'folder', name: 'Dự án Game', icon: '🎮', color: '#ea4335' },
+                { id: 'f3', parentId: 'f1', type: 'folder', name: 'Tiếng Anh', icon: '🇬🇧', color: '#34a853' }
             ]
         };
 
@@ -191,12 +225,14 @@
         
         function showGlobalContextMenu(e) {
             e.preventDefault();
-            const isItem = e.target.closest('.drive-card');
-            if (isItem) {
-                selectedId = isItem.dataset.id;
+            const itemElement = e.target.closest('.drive-card');
+            
+            if (itemElement) {
+                selectedId = itemElement.dataset.id;
                 document.getElementById('menu-delete').style.display = 'flex';
                 renderAll();
             } else {
+                selectedId = null;
                 document.getElementById('menu-delete').style.display = 'none';
             }
             
@@ -208,41 +244,58 @@
 
         window.onclick = function() { menu.style.display = 'none'; };
 
-        // --- Drag and Drop ---
-        let draggedId = null;
-        function handleDragStart(e, id) {
-            draggedId = id;
-            e.dataTransfer.setData("text/plain", id);
-            e.currentTarget.style.opacity = '0.4';
+        // --- Navigation ---
+        function openFolder(id) {
+            projectData.currentPath.push(id);
+            selectedId = null;
+            renderAll();
         }
 
-        function handleDragEnd(e) { e.currentTarget.style.opacity = '1'; }
-        function handleDragOver(e) { 
-            e.preventDefault(); 
-            document.getElementById('visual-grid').classList.add('drop-zone-active');
+        function navigateBack(index) {
+            if (index === -1) {
+                projectData.currentPath = [];
+            } else {
+                projectData.currentPath = projectData.currentPath.slice(0, index + 1);
+            }
+            selectedId = null;
+            renderAll();
         }
-        function handleDragLeave(e) { document.getElementById('visual-grid').classList.remove('drop-zone-active'); }
-        
-        function handleDrop(e) {
-            e.preventDefault();
-            document.getElementById('visual-grid').classList.remove('drop-zone-active');
-            // Logic sắp xếp có thể triển khai ở đây
+
+        function goHome() {
+            projectData.currentPath = [];
+            selectedId = null;
+            renderAll();
         }
 
         // --- AI Logic ---
-        async function callGemini(prompt, systemPrompt = "Bạn là trợ lý Google Drive thông minh.") {
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] }
-                    })
-                });
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text;
-            } catch (e) { return null; }
+        async function callGemini(prompt, systemPrompt = "Bạn là trợ lý Google Drive thông minh. Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt.") {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            let attempts = 0;
+            const maxRetries = 5;
+            
+            while (attempts < maxRetries) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        })
+                    });
+                    
+                    if (!response.ok) throw new Error('API Error');
+                    
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (e) {
+                    attempts++;
+                    const delay = Math.pow(2, attempts) * 500;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            return "Xin lỗi, tôi gặp sự cố khi kết nối. Vui lòng thử lại sau.";
         }
 
         function connectGemini() {
@@ -252,55 +305,110 @@
             document.getElementById('chat-status').className = 'w-2 h-2 rounded-full bg-emerald-500';
             document.getElementById('chat-input').disabled = false;
             document.getElementById('chat-window').innerHTML = '';
-            addChatMessage("Gemini", "Tôi đã kết nối! Bạn có thể nhấn chuột phải để yêu cầu tôi gợi ý ý tưởng hoặc chat trực tiếp tại đây.");
+            addChatMessage("Gemini", "Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể giúp bạn tạo cấu trúc thư mục, đặt tên dự án hoặc gợi ý ý tưởng xây dựng Hub học tập.");
         }
 
         async function sendAiMessage() {
             const inp = document.getElementById('chat-input');
             const msg = inp.value.trim();
-            if (!msg) return;
+            if (!msg || !isAiConnected) return;
+            
             addChatMessage("Bạn", msg, true);
             inp.value = "";
+            
+            // Hiệu ứng đang gõ
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = "ai-loading";
+            loadingDiv.className = "text-slate-400 italic text-[10px]";
+            loadingDiv.innerText = "Gemini đang suy nghĩ...";
+            document.getElementById('chat-window').appendChild(loadingDiv);
+            
             const reply = await callGemini(msg);
+            
+            const loading = document.getElementById('ai-loading');
+            if (loading) loading.remove();
+            
             if (reply) addChatMessage("Gemini", reply);
         }
 
         async function generateAiIdeas() {
-            if (!isAiConnected) return;
-            addChatMessage("Hệ thống", "Đang tạo ý tưởng cho " + projectData.title + "...");
-            const prompt = `Gợi ý 3 thư mục bài học cho dự án "${projectData.title}". Trả về JSON array: [{"name": "...", "icon": "Emoji", "color": "Hex"}]. Chỉ JSON.`;
-            const res = await callGemini(prompt, "Bạn là chuyên gia giáo dục.");
+            if (!isAiConnected) {
+                addChatMessage("Hệ thống", "Vui lòng kết nối Gemini trước!");
+                return;
+            }
+            addChatMessage("Hệ thống", "Đang phân tích cấu trúc Drive để gợi ý...");
+            const currentFolder = projectData.currentPath.length > 0 ? 
+                projectData.items.find(i => i.id === projectData.currentPath[projectData.currentPath.length - 1]).name : "Gốc";
+                
+            const prompt = `Dựa trên thư mục hiện tại là "${currentFolder}", hãy gợi ý 3 thư mục con hữu ích cho việc quản lý học tập. Trả về đúng định dạng JSON array: [{"name": "Tên", "icon": "Emoji", "color": "Hex"}]. Không thêm văn bản giải thích.`;
+            
+            const res = await callGemini(prompt, "Bạn là chuyên gia tổ chức dữ liệu.");
             try {
-                const items = JSON.parse(res.match(/\[.*\]/s)[0]);
-                items.forEach(item => {
-                    projectData.items.push({ id: 'ai'+Date.now()+Math.random(), type: 'folder', ...item });
+                const jsonStr = res.match(/\[.*\]/s)[0];
+                const newItems = JSON.parse(jsonStr);
+                const currentParentId = projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null;
+                
+                newItems.forEach(item => {
+                    projectData.items.push({ 
+                        id: 'ai_' + Math.random().toString(36).substr(2, 9), 
+                        parentId: currentParentId,
+                        type: 'folder', 
+                        ...item 
+                    });
                 });
                 renderAll();
-                addChatMessage("Gemini", "Đã thêm 3 thư mục mới vào Drive của bạn!");
-            } catch (e) {}
+                addChatMessage("Gemini", "Tôi đã thêm một số thư mục gợi ý cho bạn!");
+            } catch (e) {
+                addChatMessage("Gemini", "Tôi không thể tạo định dạng thư mục lúc này, hãy thử chat với tôi.");
+            }
         }
 
         function addChatMessage(sender, text, isUser = false) {
             const win = document.getElementById('chat-window');
             const div = document.createElement('div');
-            div.className = isUser ? "bg-blue-600 text-white p-2 rounded-lg ml-8" : "bg-white border p-2 rounded-lg mr-8 shadow-sm text-slate-700";
-            div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            div.className = isUser ? "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none ml-8 shadow-sm" : "bg-white border p-3 rounded-2xl rounded-tl-none mr-8 shadow-sm text-slate-700";
+            div.innerHTML = `<div class="font-bold mb-1 opacity-70">${sender}</div><div>${text}</div>`;
             win.appendChild(div);
             win.scrollTop = win.scrollHeight;
         }
 
-        // --- Core UI ---
+        // --- Core UI Logic ---
+        function renderBreadcrumbs() {
+            const container = document.getElementById('breadcrumb');
+            let html = `<span class="breadcrumb-item" onclick="navigateBack(-1)">Drive của tôi</span>`;
+            
+            projectData.currentPath.forEach((id, index) => {
+                const folder = projectData.items.find(i => i.id === id);
+                if (folder) {
+                    html += ` <span class="mx-1">›</span> <span class="breadcrumb-item" onclick="navigateBack(${index})">${folder.name}</span>`;
+                }
+            });
+            container.innerHTML = html;
+        }
+
         function renderVisualGrid() {
             const grid = document.getElementById('visual-grid');
-            grid.innerHTML = projectData.items.map(item => `
-                <div class="drive-card rounded-lg p-4 flex flex-col items-center gap-2 cursor-pointer relative ${selectedId === item.id ? 'selected' : ''}" 
+            const emptyState = document.getElementById('empty-state');
+            const currentParentId = projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null;
+            
+            const filteredItems = projectData.items.filter(item => item.parentId === currentParentId);
+            
+            if (filteredItems.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            grid.innerHTML = filteredItems.map(item => `
+                <div class="drive-card rounded-xl p-4 flex flex-col items-center gap-3 cursor-pointer relative ${selectedId === item.id ? 'selected' : ''}" 
                      data-id="${item.id}" 
                      draggable="true"
                      ondragstart="handleDragStart(event, '${item.id}')"
-                     ondragend="handleDragEnd(event)"
-                     onclick="selectItem(event, '${item.id}')">
-                    <div class="text-4xl" style="color: ${item.color}">${item.icon || '📁'}</div>
-                    <span class="text-xs font-medium text-slate-700 truncate w-full text-center">${item.name}</span>
+                     onclick="selectItem(event, '${item.id}')"
+                     ondblclick="openFolder('${item.id}')">
+                    <div class="text-5xl drop-shadow-sm" style="color: ${item.color}">${item.icon || '📁'}</div>
+                    <span class="text-xs font-semibold text-slate-700 truncate w-full text-center px-1">${item.name}</span>
                 </div>
             `).join('');
         }
@@ -322,36 +430,117 @@
             const pane = document.getElementById('property-editor');
             const item = projectData.items.find(i => i.id === selectedId);
             if (!item) return;
+            
             pane.innerHTML = `
-                <div class="space-y-3">
-                    <label class="block">Tên</label>
-                    <input type="text" value="${item.name}" oninput="updateField('name', this.value)" class="w-full border p-2 rounded">
-                    <label class="block">Màu sắc</label>
-                    <input type="color" value="${item.color}" oninput="updateField('color', this.value)" class="w-full h-8">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Tên mục</label>
+                        <input type="text" value="${item.name}" oninput="updateField('name', this.value)" class="w-full border p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Biểu tượng (Emoji)</label>
+                        <input type="text" value="${item.icon}" oninput="updateField('icon', this.value)" class="w-full border p-2 rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Màu chủ đạo</label>
+                        <div class="flex gap-2">
+                            <input type="color" value="${item.color}" oninput="updateField('color', this.value)" class="w-10 h-10 rounded cursor-pointer overflow-hidden border-none">
+                            <input type="text" value="${item.color}" oninput="updateField('color', this.value)" class="flex-1 border p-2 rounded-lg text-center uppercase">
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t text-[10px] text-slate-400">
+                        <p>ID: ${item.id}</p>
+                        <p>Loại: Thư mục hệ thống</p>
+                    </div>
                 </div>
             `;
         }
 
         function updateField(field, val) {
             const item = projectData.items.find(i => i.id === selectedId);
-            if (item) { item[field] = val; renderAll(); }
+            if (item) { 
+                item[field] = val; 
+                renderVisualGrid(); // Cập nhật nhanh grid mà không render lại editor
+            }
+        }
+
+        function renameItem() {
+            if (!selectedId) return;
+            const item = projectData.items.find(i => i.id === selectedId);
+            const newName = prompt("Nhập tên mới cho thư mục:", item.name);
+            if (newName) {
+                item.name = newName;
+                renderAll();
+            }
         }
 
         function deleteSelectedItem() {
-            projectData.items = projectData.items.filter(i => i.id !== selectedId);
+            if (!selectedId) return;
+            // Xóa cả thư mục con (recursive delete)
+            const idsToDelete = [selectedId];
+            let i = 0;
+            while (i < idsToDelete.length) {
+                const children = projectData.items.filter(item => item.parentId === idsToDelete[i]);
+                children.forEach(c => idsToDelete.push(c.id));
+                i++;
+            }
+            
+            projectData.items = projectData.items.filter(item => !idsToDelete.includes(item.id));
             selectedId = null;
             renderAll();
         }
 
         function addFolder() {
             const id = 'f' + Date.now();
-            projectData.items.push({ id, type: 'folder', name: 'Thư mục mới', icon: '📁', color: '#1a73e8' });
+            const currentParentId = projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null;
+            
+            projectData.items.push({ 
+                id, 
+                parentId: currentParentId, 
+                type: 'folder', 
+                name: 'Thư mục mới', 
+                icon: '📁', 
+                color: '#1a73e8' 
+            });
+            selectedId = id;
             renderAll();
         }
 
-        function updateProjectTitle() { projectData.title = document.getElementById('project-title').value; }
-        function renderAll() { renderVisualGrid(); renderEditor(); }
-        function exportProject() { alert("Đã xuất bản thành công!"); }
+        // --- Drag & Drop ---
+        function handleDragStart(e, id) {
+            e.dataTransfer.setData("text/plain", id);
+            e.currentTarget.style.opacity = '0.5';
+        }
+
+        function handleDragOver(e) { 
+            e.preventDefault(); 
+            document.getElementById('visual-grid').classList.add('drop-zone-active');
+        }
+        
+        function handleDragLeave(e) { 
+            document.getElementById('visual-grid').classList.remove('drop-zone-active'); 
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            document.getElementById('visual-grid').classList.remove('drop-zone-active');
+            // Tính năng di chuyển thư mục có thể triển khai ở đây
+        }
+
+        function renderAll() { 
+            renderBreadcrumbs();
+            renderVisualGrid(); 
+            renderEditor(); 
+        }
+        
+        function exportProject() { 
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'my-drive-project.json';
+            a.click();
+        }
     </script>
 </body>
 </html>
