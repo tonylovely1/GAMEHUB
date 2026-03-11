@@ -53,6 +53,13 @@
         }
         
         .breadcrumb-item:hover { text-decoration: underline; cursor: pointer; color: #1a73e8; }
+
+        /* Auth Modal */
+        #auth-modal {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(0,0,0,0.5);
+            display: none; items-center; justify-content: center;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden" oncontextmenu="return showGlobalContextMenu(event)">
@@ -69,6 +76,21 @@
         </div>
     </div>
 
+    <!-- Auth Modal (Google Login Simulator) -->
+    <div id="auth-modal" class="flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center">
+            <div class="flex justify-center mb-4">
+                <svg width="40" height="40" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Đăng nhập Google</h3>
+            <p class="text-slate-500 text-sm mb-6">Sử dụng tài khoản Google để kết nối và bảo mật dữ liệu của bạn trên Gemini.</p>
+            <button onclick="handleLogin()" class="w-full flex items-center justify-center gap-3 border border-slate-200 py-3 rounded-xl hover:bg-slate-50 transition-colors font-medium">
+                Tiếp tục với Google
+            </button>
+            <button onclick="closeAuthModal()" class="mt-4 text-xs text-slate-400 hover:text-slate-600">Hủy bỏ</button>
+        </div>
+    </div>
+
     <!-- Menu Chuột Phải -->
     <div id="context-menu">
         <div class="menu-item text-blue-600 font-medium" onclick="addFolder()">
@@ -77,7 +99,7 @@
         <div class="menu-item" onclick="renameItem()">
             <span>✏️</span> Đổi tên
         </div>
-        <div class="menu-item" onclick="generateAiIdeas()">
+        <div class="menu-item" id="menu-ai" onclick="generateAiIdeas()">
             <span>✨</span> Gợi ý bằng AI
         </div>
         <hr class="my-1 border-slate-200">
@@ -88,7 +110,7 @@
 
     <!-- Ứng dụng chính -->
     <div id="main-app" class="hidden-app flex flex-col h-full">
-        <!-- Header kiểu Drive -->
+        <!-- Header -->
         <header class="h-16 border-b border-slate-200 flex items-center justify-between px-4 bg-white shrink-0">
             <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
                 <div class="p-2 text-blue-600">
@@ -113,10 +135,13 @@
             <div class="flex items-center gap-4">
                 <div id="ai-status" class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-bold text-slate-500">
                     <div id="ai-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
-                    <span id="ai-text">GEMINI OFFLINE</span>
-                    <button onclick="connectGemini()" class="text-blue-600 hover:underline">KẾT NỐI</button>
+                    <span id="ai-text">CHƯA ĐĂNG NHẬP</span>
+                    <button id="btn-connect" onclick="openAuthModal()" class="text-blue-600 hover:underline">KẾT NỐI GOOGLE</button>
                 </div>
-                <button onclick="exportProject()" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Xuất bản</button>
+                <div id="user-profile" class="hidden items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold" id="user-avatar">U</div>
+                </div>
+                <button onclick="exportProject()" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all">Xuất bản</button>
             </div>
         </header>
 
@@ -144,15 +169,11 @@
                 </div>
             </aside>
 
-            <!-- Grid View -->
+            <!-- Main Workspace -->
             <main class="flex-1 bg-white p-6 overflow-y-auto" onclick="deselectAll()">
-                <div id="breadcrumb" class="flex items-center gap-2 text-slate-500 text-sm mb-6 pb-2">
-                    <!-- Breadcrumbs render here -->
-                </div>
+                <div id="breadcrumb" class="flex items-center gap-2 text-slate-500 text-sm mb-6 pb-2"></div>
 
-                <div id="visual-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
-                    <!-- Drive Items -->
-                </div>
+                <div id="visual-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"></div>
                 
                 <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 text-slate-400">
                     <div class="text-6xl mb-4">📂</div>
@@ -162,7 +183,6 @@
 
             <!-- AI Chat & Info Panel -->
             <aside class="w-80 border-l border-slate-200 flex flex-col bg-slate-50 shrink-0">
-                <!-- Properties -->
                 <div id="info-panel" class="p-6 border-b border-slate-200 bg-white hidden">
                     <h3 class="text-sm font-bold mb-4 flex justify-between items-center">
                         <span>Chi tiết</span>
@@ -171,20 +191,19 @@
                     <div id="property-editor" class="space-y-4 text-xs"></div>
                 </div>
 
-                <!-- AI Chat -->
                 <div class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
                         <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Trợ lý Gemini</span>
                         <div id="chat-status" class="w-2 h-2 rounded-full bg-slate-300"></div>
                     </div>
-                    <div id="chat-window" class="flex-1 p-4 overflow-y-auto text-xs space-y-4">
-                        <div class="text-slate-400 italic text-center py-10 px-4">
-                            Kết nối AI để bắt đầu xây dựng dự án của bạn nhanh hơn.
+                    <div id="chat-window" class="flex-1 p-4 overflow-y-auto text-[11px] space-y-4">
+                        <div id="welcome-msg" class="text-slate-400 italic text-center py-10 px-4">
+                            Đăng nhập tài khoản Google để bắt đầu trò chuyện với Gemini.
                         </div>
                     </div>
                     <div class="p-4 bg-white border-t border-slate-200">
                         <div class="relative">
-                            <input type="text" id="chat-input" disabled placeholder="Nhấn Enter để trò chuyện..." 
+                            <input type="text" id="chat-input" disabled placeholder="Đăng nhập để chat..." 
                                    class="w-full bg-slate-100 border-transparent rounded-xl p-3 text-xs focus:ring-2 focus:ring-blue-500 transition-all pr-10 outline-none"
                                    onkeydown="if(event.key==='Enter') sendAiMessage()">
                             <button onclick="sendAiMessage()" class="absolute right-2 top-1.5 p-1.5 text-blue-600">
@@ -197,191 +216,161 @@
         </div>
     </div>
 
-    <script>
-        const apiKey = ""; // API Key được cung cấp tự động bởi môi trường
-        
+    <!-- Firebase Scripts for Auth & Firestore -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by environment
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'drive-ai-manager';
+
+        // App state
+        let currentUser = null;
         let projectData = {
-            currentPath: [], // Mảng chứa ID các thư mục cha
+            currentPath: [],
             items: [
                 { id: 'f1', parentId: null, type: 'folder', name: 'Tài liệu học tập', icon: '📐', color: '#1a73e8' },
-                { id: 'f2', parentId: null, type: 'folder', name: 'Dự án Game', icon: '🎮', color: '#ea4335' },
-                { id: 'f3', parentId: 'f1', type: 'folder', name: 'Tiếng Anh', icon: '🇬🇧', color: '#34a853' }
+                { id: 'f2', parentId: null, type: 'folder', name: 'Dự án Game', icon: '🎮', color: '#ea4335' }
             ]
         };
-
         let selectedId = null;
-        let isAiConnected = false;
 
-        function checkPin() {
-            if (document.getElementById('pin-code').value === 'thanhphong') {
-                document.getElementById('lock-screen').style.display = 'none';
-                document.getElementById('main-app').classList.remove('hidden-app');
-                renderAll();
+        // --- AUTHENTICATION ---
+        window.openAuthModal = () => {
+            document.getElementById('auth-modal').style.display = 'flex';
+        };
+
+        window.closeAuthModal = () => {
+            document.getElementById('auth-modal').style.display = 'none';
+        };
+
+        window.handleLogin = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                closeAuthModal();
+            } catch (error) {
+                console.error("Login failed:", error);
+                alert("Đăng nhập thất bại. Vui lòng thử lại.");
             }
-        }
+        };
 
-        // --- Context Menu Logic ---
-        const menu = document.getElementById('context-menu');
-        
-        function showGlobalContextMenu(e) {
-            e.preventDefault();
-            const itemElement = e.target.closest('.drive-card');
-            
-            if (itemElement) {
-                selectedId = itemElement.dataset.id;
-                document.getElementById('menu-delete').style.display = 'flex';
-                renderAll();
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                updateAuthUI(user);
+                syncData();
             } else {
-                selectedId = null;
-                document.getElementById('menu-delete').style.display = 'none';
+                resetAuthUI();
             }
+        });
+
+        function updateAuthUI(user) {
+            document.getElementById('ai-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+            document.getElementById('ai-text').innerText = 'GEMINI ONLINE';
+            document.getElementById('btn-connect').style.display = 'none';
             
-            menu.style.display = 'block';
-            menu.style.left = e.pageX + 'px';
-            menu.style.top = e.pageY + 'px';
-            return false;
+            const profile = document.getElementById('user-profile');
+            profile.classList.remove('hidden');
+            profile.classList.add('flex');
+            document.getElementById('user-avatar').innerText = user.isAnonymous ? '?' : user.email?.charAt(0).toUpperCase() || 'U';
+            
+            document.getElementById('chat-status').className = 'w-2 h-2 rounded-full bg-emerald-500';
+            document.getElementById('chat-input').disabled = false;
+            document.getElementById('chat-input').placeholder = "Hỏi Gemini điều gì đó...";
+            document.getElementById('welcome-msg').innerText = "Đã kết nối! Gemini đã sẵn sàng hỗ trợ bạn quản lý thư mục.";
         }
 
-        window.onclick = function() { menu.style.display = 'none'; };
-
-        // --- Navigation ---
-        function openFolder(id) {
-            projectData.currentPath.push(id);
-            selectedId = null;
-            renderAll();
+        function resetAuthUI() {
+            document.getElementById('ai-dot').className = 'w-2 h-2 rounded-full bg-red-500';
+            document.getElementById('ai-text').innerText = 'CHƯA ĐĂNG NHẬP';
+            document.getElementById('btn-connect').style.display = 'block';
+            document.getElementById('user-profile').classList.add('hidden');
+            document.getElementById('chat-input').disabled = true;
+            document.getElementById('chat-status').className = 'w-2 h-2 rounded-full bg-slate-300';
         }
 
-        function navigateBack(index) {
-            if (index === -1) {
-                projectData.currentPath = [];
-            } else {
-                projectData.currentPath = projectData.currentPath.slice(0, index + 1);
+        // --- DATA SYNC ---
+        async function syncData() {
+            if (!currentUser) return;
+            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'project');
+            
+            // Listen for changes
+            onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    projectData = docSnap.data();
+                    renderAll();
+                } else {
+                    saveToCloud(); // Initialize first time
+                }
+            }, (error) => console.error("Firestore error:", error));
+        }
+
+        async function saveToCloud() {
+            if (!currentUser) return;
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'project');
+                await setDoc(userDocRef, projectData);
+            } catch (e) {
+                console.error("Save error:", e);
             }
-            selectedId = null;
-            renderAll();
         }
 
-        function goHome() {
-            projectData.currentPath = [];
-            selectedId = null;
-            renderAll();
-        }
-
-        // --- AI Logic ---
-        async function callGemini(prompt, systemPrompt = "Bạn là trợ lý Google Drive thông minh. Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt.") {
+        // --- GEMINI API (with Backoff) ---
+        const apiKey = "";
+        window.callGemini = async (prompt) => {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const delays = [1000, 2000, 4000, 8000, 16000];
             
-            let attempts = 0;
-            const maxRetries = 5;
-            
-            while (attempts < maxRetries) {
+            for (let i = 0; i <= delays.length; i++) {
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: prompt }] }],
-                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                            systemInstruction: { parts: [{ text: "Bạn là trợ lý AI thông minh tích hợp trong ứng dụng quản lý thư mục Google Drive. Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt." }] }
                         })
                     });
-                    
-                    if (!response.ok) throw new Error('API Error');
-                    
+                    if (!response.ok) throw new Error('API Fail');
                     const data = await response.json();
                     return data.candidates?.[0]?.content?.parts?.[0]?.text;
                 } catch (e) {
-                    attempts++;
-                    const delay = Math.pow(2, attempts) * 500;
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    if (i === delays.length) return "Xin lỗi, kết nối tới Gemini hiện đang bị gián đoạn.";
+                    await new Promise(r => setTimeout(r, delays[i]));
                 }
             }
-            return "Xin lỗi, tôi gặp sự cố khi kết nối. Vui lòng thử lại sau.";
-        }
+        };
 
-        function connectGemini() {
-            isAiConnected = true;
-            document.getElementById('ai-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
-            document.getElementById('ai-text').innerText = 'GEMINI ONLINE';
-            document.getElementById('chat-status').className = 'w-2 h-2 rounded-full bg-emerald-500';
-            document.getElementById('chat-input').disabled = false;
-            document.getElementById('chat-window').innerHTML = '';
-            addChatMessage("Gemini", "Xin chào! Tôi là trợ lý AI của bạn. Tôi có thể giúp bạn tạo cấu trúc thư mục, đặt tên dự án hoặc gợi ý ý tưởng xây dựng Hub học tập.");
-        }
-
-        async function sendAiMessage() {
-            const inp = document.getElementById('chat-input');
-            const msg = inp.value.trim();
-            if (!msg || !isAiConnected) return;
-            
-            addChatMessage("Bạn", msg, true);
-            inp.value = "";
-            
-            // Hiệu ứng đang gõ
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = "ai-loading";
-            loadingDiv.className = "text-slate-400 italic text-[10px]";
-            loadingDiv.innerText = "Gemini đang suy nghĩ...";
-            document.getElementById('chat-window').appendChild(loadingDiv);
-            
-            const reply = await callGemini(msg);
-            
-            const loading = document.getElementById('ai-loading');
-            if (loading) loading.remove();
-            
-            if (reply) addChatMessage("Gemini", reply);
-        }
-
-        async function generateAiIdeas() {
-            if (!isAiConnected) {
-                addChatMessage("Hệ thống", "Vui lòng kết nối Gemini trước!");
-                return;
-            }
-            addChatMessage("Hệ thống", "Đang phân tích cấu trúc Drive để gợi ý...");
-            const currentFolder = projectData.currentPath.length > 0 ? 
-                projectData.items.find(i => i.id === projectData.currentPath[projectData.currentPath.length - 1]).name : "Gốc";
-                
-            const prompt = `Dựa trên thư mục hiện tại là "${currentFolder}", hãy gợi ý 3 thư mục con hữu ích cho việc quản lý học tập. Trả về đúng định dạng JSON array: [{"name": "Tên", "icon": "Emoji", "color": "Hex"}]. Không thêm văn bản giải thích.`;
-            
-            const res = await callGemini(prompt, "Bạn là chuyên gia tổ chức dữ liệu.");
-            try {
-                const jsonStr = res.match(/\[.*\]/s)[0];
-                const newItems = JSON.parse(jsonStr);
-                const currentParentId = projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null;
-                
-                newItems.forEach(item => {
-                    projectData.items.push({ 
-                        id: 'ai_' + Math.random().toString(36).substr(2, 9), 
-                        parentId: currentParentId,
-                        type: 'folder', 
-                        ...item 
-                    });
-                });
+        // --- UI CORE ---
+        window.checkPin = () => {
+            if (document.getElementById('pin-code').value === 'thanhphong') {
+                document.getElementById('lock-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden-app');
                 renderAll();
-                addChatMessage("Gemini", "Tôi đã thêm một số thư mục gợi ý cho bạn!");
-            } catch (e) {
-                addChatMessage("Gemini", "Tôi không thể tạo định dạng thư mục lúc này, hãy thử chat với tôi.");
             }
-        }
+        };
 
-        function addChatMessage(sender, text, isUser = false) {
-            const win = document.getElementById('chat-window');
-            const div = document.createElement('div');
-            div.className = isUser ? "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none ml-8 shadow-sm" : "bg-white border p-3 rounded-2xl rounded-tl-none mr-8 shadow-sm text-slate-700";
-            div.innerHTML = `<div class="font-bold mb-1 opacity-70">${sender}</div><div>${text}</div>`;
-            win.appendChild(div);
-            win.scrollTop = win.scrollHeight;
-        }
+        window.renderAll = () => {
+            renderBreadcrumbs();
+            renderVisualGrid();
+            renderEditor();
+        };
 
-        // --- Core UI Logic ---
         function renderBreadcrumbs() {
             const container = document.getElementById('breadcrumb');
             let html = `<span class="breadcrumb-item" onclick="navigateBack(-1)">Drive của tôi</span>`;
-            
             projectData.currentPath.forEach((id, index) => {
                 const folder = projectData.items.find(i => i.id === id);
-                if (folder) {
-                    html += ` <span class="mx-1">›</span> <span class="breadcrumb-item" onclick="navigateBack(${index})">${folder.name}</span>`;
-                }
+                if (folder) html += ` <span class="mx-1">›</span> <span class="breadcrumb-item" onclick="navigateBack(${index})">${folder.name}</span>`;
             });
             container.innerHTML = html;
         }
@@ -390,157 +379,155 @@
             const grid = document.getElementById('visual-grid');
             const emptyState = document.getElementById('empty-state');
             const currentParentId = projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null;
+            const filtered = projectData.items.filter(item => item.parentId === currentParentId);
             
-            const filteredItems = projectData.items.filter(item => item.parentId === currentParentId);
-            
-            if (filteredItems.length === 0) {
+            if (filtered.length === 0) {
                 grid.innerHTML = '';
                 emptyState.classList.remove('hidden');
                 return;
             }
             
             emptyState.classList.add('hidden');
-            grid.innerHTML = filteredItems.map(item => `
+            grid.innerHTML = filtered.map(item => `
                 <div class="drive-card rounded-xl p-4 flex flex-col items-center gap-3 cursor-pointer relative ${selectedId === item.id ? 'selected' : ''}" 
                      data-id="${item.id}" 
-                     draggable="true"
-                     ondragstart="handleDragStart(event, '${item.id}')"
                      onclick="selectItem(event, '${item.id}')"
                      ondblclick="openFolder('${item.id}')">
-                    <div class="text-5xl drop-shadow-sm" style="color: ${item.color}">${item.icon || '📁'}</div>
-                    <span class="text-xs font-semibold text-slate-700 truncate w-full text-center px-1">${item.name}</span>
+                    <div class="text-5xl" style="color: ${item.color}">${item.icon || '📁'}</div>
+                    <span class="text-[11px] font-semibold text-slate-700 truncate w-full text-center">${item.name}</span>
                 </div>
             `).join('');
         }
 
-        function selectItem(e, id) {
+        window.openFolder = (id) => {
+            projectData.currentPath.push(id);
+            selectedId = null;
+            renderAll();
+        };
+
+        window.navigateBack = (index) => {
+            projectData.currentPath = index === -1 ? [] : projectData.currentPath.slice(0, index + 1);
+            selectedId = null;
+            renderAll();
+        };
+
+        window.selectItem = (e, id) => {
             e.stopPropagation();
             selectedId = id;
             document.getElementById('info-panel').classList.remove('hidden');
             renderAll();
-        }
+        };
 
-        function deselectAll() {
+        window.deselectAll = () => {
             selectedId = null;
             document.getElementById('info-panel').classList.add('hidden');
             renderAll();
-        }
+        };
+
+        window.addFolder = () => {
+            const id = 'f' + Date.now();
+            projectData.items.push({ 
+                id, 
+                parentId: projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null,
+                type: 'folder', name: 'Thư mục mới', icon: '📁', color: '#1a73e8' 
+            });
+            saveToCloud();
+            renderAll();
+        };
+
+        window.renameItem = () => {
+            const item = projectData.items.find(i => i.id === selectedId);
+            const n = prompt("Tên mới:", item?.name);
+            if (n) { item.name = n; saveToCloud(); renderAll(); }
+        };
+
+        window.deleteSelectedItem = () => {
+            if (!selectedId) return;
+            projectData.items = projectData.items.filter(i => i.id !== selectedId);
+            selectedId = null;
+            saveToCloud();
+            renderAll();
+        };
+
+        window.updateField = (f, v) => {
+            const item = projectData.items.find(i => i.id === selectedId);
+            if (item) { item[f] = v; saveToCloud(); renderVisualGrid(); }
+        };
 
         function renderEditor() {
             const pane = document.getElementById('property-editor');
             const item = projectData.items.find(i => i.id === selectedId);
             if (!item) return;
-            
             pane.innerHTML = `
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-slate-400 mb-1">Tên mục</label>
-                        <input type="text" value="${item.name}" oninput="updateField('name', this.value)" class="w-full border p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 mb-1">Biểu tượng (Emoji)</label>
-                        <input type="text" value="${item.icon}" oninput="updateField('icon', this.value)" class="w-full border p-2 rounded-lg outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 mb-1">Màu chủ đạo</label>
-                        <div class="flex gap-2">
-                            <input type="color" value="${item.color}" oninput="updateField('color', this.value)" class="w-10 h-10 rounded cursor-pointer overflow-hidden border-none">
-                            <input type="text" value="${item.color}" oninput="updateField('color', this.value)" class="flex-1 border p-2 rounded-lg text-center uppercase">
-                        </div>
-                    </div>
-                    <div class="pt-4 border-t text-[10px] text-slate-400">
-                        <p>ID: ${item.id}</p>
-                        <p>Loại: Thư mục hệ thống</p>
-                    </div>
-                </div>
-            `;
+                    <div><label class="block text-slate-400 mb-1">Tên mục</label>
+                    <input type="text" value="${item.name}" oninput="updateField('name', this.value)" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="block text-slate-400 mb-1">Emoji</label>
+                    <input type="text" value="${item.icon}" oninput="updateField('icon', this.value)" class="w-full border p-2 rounded-lg"></div>
+                    <div><label class="block text-slate-400 mb-1">Màu sắc</label>
+                    <input type="color" value="${item.color}" oninput="updateField('color', this.value)" class="w-full h-10 border-none"></div>
+                </div>`;
         }
 
-        function updateField(field, val) {
-            const item = projectData.items.find(i => i.id === selectedId);
-            if (item) { 
-                item[field] = val; 
-                renderVisualGrid(); // Cập nhật nhanh grid mà không render lại editor
-            }
-        }
-
-        function renameItem() {
-            if (!selectedId) return;
-            const item = projectData.items.find(i => i.id === selectedId);
-            const newName = prompt("Nhập tên mới cho thư mục:", item.name);
-            if (newName) {
-                item.name = newName;
-                renderAll();
-            }
-        }
-
-        function deleteSelectedItem() {
-            if (!selectedId) return;
-            // Xóa cả thư mục con (recursive delete)
-            const idsToDelete = [selectedId];
-            let i = 0;
-            while (i < idsToDelete.length) {
-                const children = projectData.items.filter(item => item.parentId === idsToDelete[i]);
-                children.forEach(c => idsToDelete.push(c.id));
-                i++;
-            }
+        // --- CHAT LOGIC ---
+        window.sendAiMessage = async () => {
+            const inp = document.getElementById('chat-input');
+            const val = inp.value.trim();
+            if (!val || !currentUser) return;
             
-            projectData.items = projectData.items.filter(item => !idsToDelete.includes(item.id));
-            selectedId = null;
-            renderAll();
-        }
-
-        function addFolder() {
-            const id = 'f' + Date.now();
-            const currentParentId = projectData.currentPath.length > 0 ? projectData.currentPath[projectData.currentPath.length - 1] : null;
+            addMsg("Bạn", val, true);
+            inp.value = "";
             
-            projectData.items.push({ 
-                id, 
-                parentId: currentParentId, 
-                type: 'folder', 
-                name: 'Thư mục mới', 
-                icon: '📁', 
-                color: '#1a73e8' 
-            });
-            selectedId = id;
-            renderAll();
+            const loading = document.createElement('div');
+            loading.className = "text-slate-400 italic text-[10px]";
+            loading.innerText = "Gemini đang phản hồi...";
+            document.getElementById('chat-window').appendChild(loading);
+            
+            const reply = await window.callGemini(val);
+            loading.remove();
+            addMsg("Gemini", reply);
+        };
+
+        function addMsg(s, t, isU = false) {
+            const w = document.getElementById('chat-window');
+            const d = document.createElement('div');
+            d.className = isU ? "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none ml-8" : "bg-white border p-3 rounded-2xl rounded-tl-none mr-8 text-slate-700";
+            d.innerHTML = `<div class="font-bold mb-1 opacity-70">${s}</div><div>${t}</div>`;
+            w.appendChild(d);
+            w.scrollTop = w.scrollHeight;
+            if (document.getElementById('welcome-msg')) document.getElementById('welcome-msg').remove();
         }
 
-        // --- Drag & Drop ---
-        function handleDragStart(e, id) {
-            e.dataTransfer.setData("text/plain", id);
-            e.currentTarget.style.opacity = '0.5';
-        }
-
-        function handleDragOver(e) { 
-            e.preventDefault(); 
-            document.getElementById('visual-grid').classList.add('drop-zone-active');
-        }
-        
-        function handleDragLeave(e) { 
-            document.getElementById('visual-grid').classList.remove('drop-zone-active'); 
-        }
-
-        function handleDrop(e) {
+        // Global context menu positioning
+        const menu = document.getElementById('context-menu');
+        window.showGlobalContextMenu = (e) => {
             e.preventDefault();
-            document.getElementById('visual-grid').classList.remove('drop-zone-active');
-            // Tính năng di chuyển thư mục có thể triển khai ở đây
-        }
+            const card = e.target.closest('.drive-card');
+            selectedId = card ? card.dataset.id : null;
+            document.getElementById('menu-delete').style.display = selectedId ? 'flex' : 'none';
+            document.getElementById('menu-ai').style.display = currentUser ? 'flex' : 'none';
+            menu.style.display = 'block';
+            menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
+            renderAll();
+            return false;
+        };
+        window.onclick = () => menu.style.display = 'none';
 
-        function renderAll() { 
-            renderBreadcrumbs();
-            renderVisualGrid(); 
-            renderEditor(); 
-        }
-        
-        function exportProject() { 
-            const blob = new Blob([JSON.stringify(projectData, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'my-drive-project.json';
-            a.click();
-        }
+        window.generateAiIdeas = async () => {
+            if (!currentUser) return;
+            const folder = projectData.currentPath.length > 0 ? projectData.items.find(i => i.id === projectData.currentPath[projectData.currentPath.length - 1]).name : "Gốc";
+            const prompt = `Gợi ý 3 thư mục con cho "${folder}" dưới dạng JSON array: [{"name": "Tên", "icon": "Emoji", "color": "Hex"}].`;
+            const res = await window.callGemini(prompt);
+            try {
+                const items = JSON.parse(res.match(/\[.*\]/s)[0]);
+                items.forEach(it => {
+                    projectData.items.push({ id: 'ai_'+Math.random(), parentId: projectData.currentPath[projectData.currentPath.length-1] || null, ...it });
+                });
+                saveToCloud();
+                renderAll();
+                addMsg("Gemini", "Đã thêm gợi ý vào Drive của bạn!");
+            } catch(e) {}
+        };
     </script>
 </body>
 </html>
