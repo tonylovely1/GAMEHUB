@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Game Hub - Ultimate Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-main: #f8fafc;
+        }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg-main);
+            color: #1e293b;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .tree-node {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tree-node:hover {
+            transform: translateX(4px);
+        }
+        .drop-target {
+            border: 2px dashed var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        #lock-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: radial-gradient(circle at top right, #6366f1, #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-hidden">
+
+    <!-- 1. Hệ thống Đăng nhập & Bảo mật -->
+    <div id="lock-screen" class="flex flex-col gap-6">
+        <div class="glass-card p-10 rounded-[3rem] shadow-2xl w-full max-w-md text-center">
+            <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <h2 class="text-3xl font-800 text-slate-800 mb-2">Game Hub Builder</h2>
+            <p class="text-slate-500 text-sm mb-8 font-medium">Đăng nhập để quản lý kho tài nguyên của bạn</p>
+            
+            <div class="space-y-4">
+                <!-- Google Login Button (Sẽ hoạt động khi up lên GitHub/Domain) -->
+                <div id="g_id_onload"
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard"></div>
+
+                <div class="relative py-4">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-slate-400">Hoặc dùng mật khẩu</span></div>
+                </div>
+
+                <input type="password" id="app-password" placeholder="Mật khẩu hệ thống" 
+                       class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center font-bold">
+                <button onclick="checkInternalPassword()" 
+                        class="w-full bg-slate-900 hover:bg-black text-white p-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg">
+                    Truy cập ngay
+                </button>
+            </div>
+        </div>
+        <p class="text-white/70 text-xs font-medium italic">Sản phẩm dành cho quản lý nội dung giáo dục</p>
+    </div>
+
+    <!-- 2. Giao diện ứng dụng chính -->
+    <div id="main-app" class="hidden h-screen flex flex-col">
+        <!-- Header -->
+        <header class="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-40">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">G</div>
+                <div>
+                    <h1 class="font-800 text-slate-800 text-lg">AI Game Hub Builder</h1>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Hệ thống quản lý trực quan v4.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="exportFullHub()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Xuất bản Hub (.html)
+                </button>
+                <button onclick="location.reload()" class="p-2.5 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Sidebar Trái: Cấu trúc cây (Tree Management) -->
+            <aside class="w-80 bg-white border-r border-slate-200 flex flex-col">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h2 class="text-xs font-800 text-slate-400 uppercase tracking-widest">Cấu trúc cây</h2>
+                    <div class="flex gap-1">
+                        <button onclick="addNewFolder()" title="Thêm thư mục" class="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2"/></svg>
+                        </button>
+                        <button onclick="document.getElementById('file-upload').click()" title="Thêm Game HTML" class="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"/></svg>
+                        </button>
+                        <input type="file" id="file-upload" class="hidden" multiple accept=".html">
+                    </div>
+                </div>
+
+                <div id="tree-container" class="flex-1 overflow-y-auto p-4 space-y-2">
+                    <!-- Nodes rendered by JS -->
+                </div>
+
+                <div class="p-4 bg-slate-50 border-t border-slate-200">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Ảnh nền Hub</label>
+                        <input type="text" id="hub-bg-url" onchange="updateHubConfig()" placeholder="URL ảnh nền..." class="w-full text-xs p-2 rounded-lg border-slate-200">
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Workspace: Tùy chỉnh Trực quan -->
+            <main class="flex-1 bg-slate-50 overflow-y-auto p-12">
+                <div class="max-w-5xl mx-auto">
+                    <div id="preview-area" class="min-h-[70vh] rounded-[3rem] shadow-xl p-10 relative overflow-hidden transition-all duration-500 bg-white" style="background-size: cover; background-position: center;">
+                        <div id="preview-overlay" class="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-0"></div>
+                        
+                        <div class="relative z-10">
+                            <input type="text" id="project-title" oninput="updateHubConfig()" placeholder="Tên dự án học tập" class="bg-transparent text-4xl font-800 text-slate-800 outline-none w-full border-b-2 border-transparent focus:border-indigo-500/30 mb-8">
+                            
+                            <div id="visual-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <!-- Cards generated dynamically based on tree -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Sidebar Phải: Thuộc tính & AI -->
+            <aside class="w-72 bg-white border-l border-slate-200 p-6 space-y-8">
+                <div>
+                    <h3 class="text-xs font-800 text-slate-400 uppercase tracking-widest mb-4">Thuộc tính Mục</h3>
+                    <div id="editor-pane" class="space-y-4">
+                        <p class="text-xs text-slate-400 italic">Chọn một mục để chỉnh sửa</p>
+                    </div>
+                </div>
+
+                <div class="pt-8 border-t border-slate-100">
+                    <h3 class="text-xs font-800 text-slate-400 uppercase tracking-widest mb-4">Trợ lý Gemini AI</h3>
+                    <div class="bg-indigo-50 p-4 rounded-2xl text-[11px] text-indigo-700 leading-relaxed">
+                        Bạn có thể yêu cầu tôi: "Hãy sắp xếp lại các bài học Toán vào cùng một thư mục" hoặc "Tạo một giao diện màu xanh lá chủ đạo".
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURE ---
+        let hubData = {
+            title: "Dự án mới",
+            background: "",
+            items: [
+                { id: 'f1', type: 'folder', name: 'Toán học', icon: '📐', image: '', children: [] },
+                { id: 'f2', type: 'folder', name: 'Tiếng Việt', icon: '📖', image: '', children: [] }
+            ]
+        };
+
+        let selectedId = null;
+
+        // --- AUTH LOGIC ---
+        function checkInternalPassword() {
+            const pw = document.getElementById('app-password').value;
+            if (pw === 'thanhphong') {
+                unlockApp();
+            } else {
+                alert("Mật khẩu không chính xác!");
+            }
+        }
+
+        function handleCredentialResponse(response) {
+            console.log("Đã nhận token Google:", response.credential);
+            unlockApp();
+        }
+
+        function unlockApp() {
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('main-app').classList.remove('hidden');
+            renderAll();
+        }
+
+        // --- TREE & WORKSPACE LOGIC ---
+        function addNewFolder() {
+            const newFolder = {
+                id: 'f' + Date.now(),
+                type: 'folder',
+                name: 'Thư mục mới',
+                icon: '📁',
+                image: '',
+                children: []
+            };
+            hubData.items.push(newFolder);
+            renderAll();
+        }
+
+        document.getElementById('file-upload').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            for (let file of files) {
+                const content = await file.text();
+                const newGame = {
+                    id: 'g' + Date.now() + Math.random(),
+                    type: 'game',
+                    name: file.name.replace('.html', ''),
+                    icon: '🎮',
+                    image: '',
+                    content: content
+                };
+                hubData.items.push(newGame);
+            }
+            renderAll();
+        });
+
+        function renderAll() {
+            renderTree();
+            renderVisualWorkspace();
+            renderEditor();
+        }
+
+        function renderTree() {
+            const container = document.getElementById('tree-container');
+            container.innerHTML = '';
+            
+            function buildNode(item, depth = 0) {
+                const el = document.createElement('div');
+                el.className = `tree-node flex items-center gap-2 p-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-all ${selectedId === item.id ? 'bg-indigo-50 border-indigo-200' : ''}`;
+                el.style.marginLeft = `${depth * 16}px`;
+                el.draggable = true;
+                
+                el.innerHTML = `
+                    <span class="text-sm">${item.type === 'folder' ? '📁' : '📄'}</span>
+                    <span class="text-xs font-bold text-slate-600 truncate">${item.name}</span>
+                `;
+
+                el.onclick = (e) => {
+                    e.stopPropagation();
+                    selectedId = item.id;
+                    renderAll();
+                };
+
+                el.ondragstart = (e) => e.dataTransfer.setData('text/plain', item.id);
+                el.ondragover = (e) => e.preventDefault();
+                el.ondrop = (e) => {
+                    e.preventDefault();
+                    const sourceId = e.dataTransfer.getData('text/plain');
+                    moveItem(sourceId, item.id);
+                };
+
+                container.appendChild(el);
+                if (item.children) item.children.forEach(child => buildNode(child, depth + 1));
+            }
+
+            hubData.items.forEach(item => buildNode(item));
+        }
+
+        function renderVisualWorkspace() {
+            const grid = document.getElementById('visual-grid');
+            const preview = document.getElementById('preview-area');
+            const titleInput = document.getElementById('project-title');
+            
+            titleInput.value = hubData.title;
+            if (hubData.background) {
+                preview.style.backgroundImage = `url(${hubData.background})`;
+                document.getElementById('preview-overlay').style.opacity = '0.5';
+            }
+
+            grid.innerHTML = hubData.items.map(item => `
+                <div class="glass-card p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group relative overflow-hidden min-h-[180px] flex flex-col justify-end border-2 border-transparent hover:border-indigo-200">
+                    ${item.image ? `<img src="${item.image}" class="absolute inset-0 w-full h-full object-cover z-0 opacity-40 group-hover:scale-110 transition-transform duration-700">` : ''}
+                    <div class="relative z-10">
+                        <div class="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-lg mb-3">${item.icon || (item.type === 'folder' ? '📁' : '🎮')}</div>
+                        <h4 class="font-800 text-slate-800 text-sm">${item.name}</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">${item.type === 'folder' ? (item.children.length + ' mục') : 'Trò chơi HTML'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderEditor() {
+            const pane = document.getElementById('editor-pane');
+            const item = findItemById(hubData.items, selectedId);
+
+            if (!item) {
+                pane.innerHTML = '<p class="text-xs text-slate-400 italic">Chọn một mục để chỉnh sửa</p>';
+                return;
+            }
+
+            pane.innerHTML = `
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Tên hiển thị</label>
+                        <input type="text" value="${item.name}" oninput="updateItemData('${item.id}', 'name', this.value)" class="w-full p-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Biểu tượng (Emoji)</label>
+                        <input type="text" value="${item.icon || ''}" oninput="updateItemData('${item.id}', 'icon', this.value)" class="w-full p-2.5 rounded-xl border border-slate-200 text-sm">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Ảnh nền riêng (URL)</label>
+                        <input type="text" value="${item.image || ''}" oninput="updateItemData('${item.id}', 'image', this.value)" class="w-full p-2.5 rounded-xl border border-slate-200 text-sm placeholder:italic" placeholder="https://...">
+                    </div>
+                    <button onclick="deleteCurrentItem()" class="w-full py-2 bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors mt-4">Xóa mục này</button>
+                </div>
+            `;
+        }
+
+        // --- HELPER FUNCTIONS ---
+        function findItemById(items, id) {
+            for (let item of items) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findItemById(item.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        function updateItemData(id, field, value) {
+            const item = findItemById(hubData.items, id);
+            if (item) {
+                item[field] = value;
+                renderAll();
+            }
+        }
+
+        function updateHubConfig() {
+            hubData.title = document.getElementById('project-title').value;
+            hubData.background = document.getElementById('hub-bg-url').value;
+            renderVisualWorkspace();
+        }
+
+        function deleteCurrentItem() {
+            if (!confirm("Bạn có muốn xóa mục này không?")) return;
+            hubData.items = removeById(hubData.items, selectedId);
+            selectedId = null;
+            renderAll();
+        }
+
+        function removeById(items, id) {
+            return items.filter(item => {
+                if (item.id === id) return false;
+                if (item.children) item.children = removeById(item.children, id);
+                return true;
+            });
+        }
+
+        // --- EXPORT SYSTEM ---
+        function exportFullHub() {
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${hubData.title}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: url('${hubData.background}') center/cover fixed no-repeat; min-height: 100vh; font-family: sans-serif; }
+        .card { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); transition: all 0.3s; cursor: pointer; }
+        .card:hover { transform: scale(1.05); background: #fff; }
+    </style>
+</head>
+<body class="p-8">
+    <h1 class="text-4xl font-black text-center mb-12 text-slate-800 drop-shadow-md">${hubData.title}</h1>
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        ${hubData.items.map(item => `
+            <div class="card p-8 rounded-[2.5rem] shadow-xl text-center" onclick="alert('Đang mở: ${item.name}')">
+                <div class="text-5xl mb-4">${item.icon || '🎮'}</div>
+                <h3 class="text-xl font-bold text-slate-700">${item.name}</h3>
+            </div>
+        `).join('')}
+    </div>
+</body>
+</html>`;
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = hubData.title + '.html';
+            a.click();
+        }
+    </script>
+</body>
+</html>
